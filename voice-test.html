@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recognition Test - JanAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .status {
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            font-weight: 600;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 2px solid #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border: 2px solid #388e3c;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+            border: 2px solid #d32f2f;
+        }
+
+        .status.listening {
+            background: #fff3e0;
+            color: #f57c00;
+            border: 2px solid #f57c00;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        button {
+            width: 100%;
+            padding: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 0.5rem 0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        .transcript {
+            background: #f5f5f5;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            min-height: 100px;
+            border: 2px dashed #ccc;
+        }
+
+        .transcript.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .log {
+            background: #263238;
+            color: #aed581;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .log-entry {
+            margin: 0.3rem 0;
+        }
+
+        .instructions {
+            background: #fff9c4;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #fbc02d;
+        }
+
+        .instructions h3 {
+            color: #f57f17;
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions ol {
+            margin-left: 1.5rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎤 Voice Recognition Test</h1>
+        <p style="color: #666; margin-bottom: 1.5rem;">Test if your browser supports speech recognition</p>
+
+        <div id="status" class="status info">
+            ℹ️ Click "Start Test" to check browser compatibility
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li>Click the "Start Test" button below</li>
+                <li>Allow microphone access when prompted</li>
+                <li>Speak clearly into your microphone</li>
+                <li>See if your words appear in the transcript box</li>
+            </ol>
+        </div>
+
+        <button id="startBtn" class="btn-primary" onclick="startTest()">
+            🎙️ Start Voice Test
+        </button>
+
+        <button id="stopBtn" class="btn-danger hidden" onclick="stopTest()">
+            🛑 Stop Listening
+        </button>
+
+        <div id="transcriptBox" class="transcript">
+            <strong>What you say will appear here...</strong>
+            <div id="transcript" style="margin-top: 0.5rem;"></div>
+        </div>
+
+        <div class="log">
+            <strong>📊 Console Log:</strong>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let recognition = null;
+        let isListening = false;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logDiv.innerHTML += `<div class="log-entry">[${timestamp}] ${icon} ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            const icons = {
+                info: 'ℹ️',
+                success: '✅',
+                error: '❌',
+                listening: '🎤'
+            };
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = `${icons[type]} ${message}`;
+        }
+
+        function startTest() {
+            log('Starting voice recognition test...');
+
+            // Check browser support
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                updateStatus('❌ Your browser does NOT support speech recognition!', 'error');
+                log('Speech Recognition API not found', 'error');
+                log('Please use Chrome or Edge browser', 'error');
+                alert('❌ Speech Recognition Not Supported!\n\nYour browser does not support speech recognition.\n\nPlease use:\n• Google Chrome\n• Microsoft Edge');
+                return;
+            }
+
+            log('✅ Browser supports speech recognition!', 'success');
+            updateStatus('Browser supports speech recognition ✅', 'success');
+
+            // Initialize recognition
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-IN';
+
+            log('Configured speech recognition for English (India)');
+
+            recognition.onstart = () => {
+                isListening = true;
+                log('🎤 Listening started! Speak now...', 'success');
+                updateStatus('Listening... Speak now! 🎤', 'listening');
+                document.getElementById('startBtn').classList.add('hidden');
+                document.getElementById('stopBtn').classList.remove('hidden');
+                document.getElementById('transcriptBox').classList.add('active');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+
+                document.getElementById('transcript').innerHTML = `<strong style="color: #667eea; font-size: 1.2rem;">${transcript}</strong>`;
+                log(`Recognized: "${transcript}"`);
+
+                if (event.results[0].isFinal) {
+                    log(`✅ Final result: "${transcript}"`, 'success');
+                }
+            };
+
+            recognition.onerror = (event) => {
+                log(`❌ ERROR: ${event.error}`, 'error');
+
+                if (event.error === 'not-allowed') {
+                    updateStatus('Microphone permission DENIED! Please allow microphone access.', 'error');
+                    alert('🚫 Microphone Access Denied!\n\nPlease:\n1. Click the camera/lock icon in address bar\n2. Allow microphone access\n3. Refresh this page\n4. Try again');
+                } else if (event.error === 'no-speech') {
+                    updateStatus('No speech detected. Try speaking louder!', 'error');
+                } else if (event.error === 'network') {
+                    updateStatus('Network error. Check your internet connection.', 'error');
+                } else {
+                    updateStatus(`Error: ${event.error}`, 'error');
+                }
+
+                stopTest();
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                log('🛑 Listening stopped');
+                updateStatus('Listening stopped. Click "Start Test" to try again.', 'info');
+                document.getElementById('startBtn').classList.remove('hidden');
+                document.getElementById('stopBtn').classList.add('hidden');
+                document.getElementById('transcriptBox').classList.remove('active');
+            };
+
+            // Start recognition
+            try {
+                recognition.start();
+                log('Requesting microphone access...');
+            } catch (error) {
+                log(`❌ Failed to start: ${error.message}`, 'error');
+                updateStatus(`Failed to start: ${error.message}`, 'error');
+            }
+        }
+
+        function stopTest() {
+            if (recognition) {
+                recognition.stop();
+                log('Manually stopped listening');
+            }
+        }
+
+        // Initial log
+        log('Voice Recognition Test Page Loaded');
+        log('Click "Start Test" to begin');
+    </script>
+</body>
+
+</html>
