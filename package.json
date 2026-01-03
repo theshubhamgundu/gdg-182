@@ -1,5 +1,5 @@
 {
-      "name": "Civic-Tech AI Assistant",
+      "name": "civic-tech-ai-assistant",
       "version": "0.1.0",
       "private": true,
       "dependencies": {
@@ -71,6 +71,6 @@
             "dev:backend": "tsx src/server/index.ts",
             "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
             "build": "vite build",
-            "build:backend": "tsc src/server/index.ts --outDir dist --module commonjs --target es2020"
+            "build:backend": "tsc src/server/index.ts --outDir dist-server --module commonjs --target es2020"
       }
 }

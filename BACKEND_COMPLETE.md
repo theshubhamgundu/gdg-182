@@ -360,7 +360,7 @@ npm run build:backend
 ```
 3. Run:
 ```bash
-node dist/index.js
+node dist-server/index.js
 ```
 
 ---

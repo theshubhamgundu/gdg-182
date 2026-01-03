@@ -381,16 +381,19 @@ npm run dev:backend
 ```
 
 ### Production
-```bash
-npm run build:backend
-node dist/index.js
-```
-
-### Environment Setup for Production
 1. Set `NODE_ENV=production`
 2. Use secure API key storage
 3. Configure proper CORS origins
 4. Set up monitoring and logs
+
+5. Build backend:
+```bash
+npm run build:backend
+```
+6. Run:
+```bash
+node dist-server/index.js
+```
 
 ## 📊 API Limits
 
